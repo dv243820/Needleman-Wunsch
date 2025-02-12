@@ -10,7 +10,7 @@
 #include <cstdlib>
 using namespace std;
 
-// Instead of making an entire other matrix, just store both the value and direction in one spot
+// Store both the value and direction in one spot, rather than another matrix (same space complexity)
 struct Cell
 {
     int val;
@@ -18,17 +18,58 @@ struct Cell
 };
 
 // function declarations
+void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch);
 void outputMatrix(Cell **matrix, int sx, int sy, string x, string y, string type);
 void initMatrix(Cell **matrix, int sx, int sy, int gap);
-void doNW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch);
+void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch);
 
 int main(int argc, char const *argv[])
 {
     // Variables
-    string x, y, input;
-    int sx, sy, gap = -2, match = 1, mismatch = -1;
+    string x, y; // The two sequences
+    int sx, sy, gap = -2, match = 1, mismatch = -1; // Note: default values, can be changed by input
 
     // Get the sequences from input
+    inputSequences(x, y, gap, match, mismatch);
+
+    // Get the size of the sequences
+    sx = x.size();
+    sy = y.size();
+
+    // Create the matrix - a pointer to a pointer of Cells
+    Cell **matrix = new Cell *[sx + 1];
+
+    for (int i = 0; i < sx + 1; i++)
+    {
+        // Allocate memory for the rows
+        matrix[i] = new Cell[sy + 1];
+    }
+
+    // Initialize the matrix
+    initMatrix(matrix, sx, sy, gap);
+    NW(matrix, sx, sy, x, y, gap, match, mismatch);
+
+    // Output scoring matrix followed by directional matrix
+    outputMatrix(matrix, sx, sy, x, y, "val");
+    cout << "----------------------------------------" << endl;
+    outputMatrix(matrix, sx, sy, x, y, "dir");
+
+
+    // CLEAR MEMORY
+    for (int i = 0; i < sx + 1; i++)
+    {
+        // Free the row
+        delete[] matrix[i];
+    }
+    // Free the matrix itself
+    delete[] matrix;
+
+    return 0;
+} // main
+
+void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch)
+{
+    string input;
     cout << "Enter seqeuence 1: ";
     cin >> y;
     cout << "Enter seqeuence 2: ";
@@ -47,40 +88,7 @@ int main(int argc, char const *argv[])
         cout << "Enter the mismatch penalty: ";
         cin >> mismatch;
     }
-
-    // Get the size of the sequences
-    sx = x.size();
-    sy = y.size();
-
-
-    // Create the matrix - a pointer to a pointer of Cells
-    Cell **matrix = new Cell *[sx + 1];
-
-    for (int i = 0; i < sx + 1; i++)
-    {
-        // Allocate memory for the rows
-        matrix[i] = new Cell[sy + 1];
-    }
-
-    // Initialize the matrix
-    initMatrix(matrix, sx, sy, gap);
-    doNW(matrix, sx, sy, x, y, gap, match, mismatch);
-    
-    outputMatrix(matrix, sx, sy, x, y, "val");
-    cout << "----------------------------------------" << endl;
-    outputMatrix(matrix, sx, sy, x, y, "dir");
-
-    // CLEAR MEMORY
-    for (int i = 0; i < sx + 1; i++)
-    {
-        // Free the row
-        delete[] matrix[i];
-    }
-    // Free the matrix itself
-    delete[] matrix;
-
-    return 0;
-} // main
+}
 
 void outputMatrix(Cell **matrix, int sx, int sy, string x, string y, string type)
 {
@@ -132,9 +140,10 @@ void initMatrix(Cell **matrix, int sx, int sy, int gap)
     }
 }
 
-void doNW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
+void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
 {
     int diagonal, left, up;
+    
     for (int i = 1; i < sx + 1; i++)
     {
         for (int j = 1; j < sy + 1; j++)
