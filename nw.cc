@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
+#include <string>
 using namespace std;
 
 // Store both the value and direction in one spot, rather than another matrix (same space complexity)
@@ -22,11 +23,12 @@ void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch);
 void outputMatrix(Cell **matrix, int sx, int sy, string x, string y, string type);
 void initMatrix(Cell **matrix, int sx, int sy, int gap);
 void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch);
+void alignScore(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch);
 
 int main(int argc, char const *argv[])
 {
     // Variables
-    string x, y; // The two sequences
+    string x, y;                                    // The two sequences
     int sx, sy, gap = -2, match = 1, mismatch = -1; // Note: default values, can be changed by input
 
     // Get the sequences from input
@@ -49,11 +51,20 @@ int main(int argc, char const *argv[])
     initMatrix(matrix, sx, sy, gap);
     NW(matrix, sx, sy, x, y, gap, match, mismatch);
 
-    // Output scoring matrix followed by directional matrix
-    outputMatrix(matrix, sx, sy, x, y, "val");
-    cout << "----------------------------------------" << endl;
-    outputMatrix(matrix, sx, sy, x, y, "dir");
+    // Prompt user if they want to output the matrix
+    string output;
+    cout << "Output the scoring & directional matrix? Not recommended for large sequences. (y/n): ";
+    cin >> output;
+    if (output == "y" || output == "Y" || output == "yes" || output == "Yes")
+    {
+        // Output scoring matrix followed by directional matrix
+        outputMatrix(matrix, sx, sy, x, y, "val");
+        cout << "----------------------------------------" << endl;
+        outputMatrix(matrix, sx, sy, x, y, "dir");
+    }
 
+    // Get and output the final alignment & score
+    alignScore(matrix, sx, sy, x, y, gap, match, mismatch);
 
     // CLEAR MEMORY
     for (int i = 0; i < sx + 1; i++)
@@ -70,9 +81,9 @@ int main(int argc, char const *argv[])
 void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch)
 {
     string input;
-    cout << "Enter seqeuence 1: ";
+    cout << "Enter sequence 1: ";
     cin >> y;
-    cout << "Enter seqeuence 2: ";
+    cout << "Enter sequence 2: ";
     cin >> x;
 
     // Get the scoring values
@@ -143,20 +154,18 @@ void initMatrix(Cell **matrix, int sx, int sy, int gap)
 void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
 {
     int diagonal, left, up;
-    
+
     for (int i = 1; i < sx + 1; i++)
     {
         for (int j = 1; j < sy + 1; j++)
         {
             // Get the three values
-            if (x[i - 1] == y[j - 1])
+            if (x[i - 1] == y[j - 1]) // match
             {
-                // match
                 diagonal = matrix[i - 1][j - 1].val + match;
             }
-            else
+            else // mismatch
             {
-                // mismatch
                 diagonal = matrix[i - 1][j - 1].val + mismatch;
             }
             left = matrix[i][j - 1].val + gap;
@@ -184,4 +193,60 @@ void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, i
             }
         }
     }
+    // Matrix is fully filled
+}
+
+void alignScore(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
+{
+    string xfinal, yfinal;    // Final aligned sequences
+    int tmpx = sx, tmpy = sy; // to walk through matrix
+
+    // Start with bottom right most arrow, work until we reach 0 - the edge.
+    int direction = matrix[sx][sy].dir;
+
+    while (direction != 0)
+    {
+        if (direction == 1) // Diagonal
+        {
+            // Push both back into string
+            xfinal.insert(xfinal.begin(), x[tmpx - 1]);
+            yfinal.insert(yfinal.begin(), y[tmpy - 1]);
+            tmpx--;
+            tmpy--;
+        }
+        else if (direction == 2) // Left - gap in the x sequence
+        {
+            xfinal.insert(xfinal.begin(), '-');
+            yfinal.insert(yfinal.begin(), y[tmpy - 1]);
+            tmpy--;
+        }
+        else if (direction == 3) // Right - gap in the y sequence
+        {
+            yfinal.insert(yfinal.begin(), '-');
+            xfinal.insert(xfinal.begin(), x[tmpx - 1]);
+            tmpx--;
+        }
+        // Get next direction
+        direction = matrix[tmpx][tmpy].dir;
+    }
+
+    // If any of the sequences are not fully walked through, add the rest of the string
+    while (tmpx > 0)
+    {
+        xfinal.insert(xfinal.begin(), x[tmpx - 1]);
+        yfinal.insert(yfinal.begin(), '-');
+        tmpx--;
+    }
+    while (tmpy > 0)
+    {
+        yfinal.insert(yfinal.begin(), y[tmpy - 1]);
+        xfinal.insert(xfinal.begin(), '-');
+        tmpy--;
+    }
+
+    cout << endl;
+    cout << "ALIGNMENT:" << endl;
+    cout << xfinal << endl
+         << yfinal << endl;
+    cout << "FINAL SCORE: " << matrix[sx][sy].val << endl;
 }
