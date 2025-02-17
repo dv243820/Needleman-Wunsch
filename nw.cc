@@ -78,6 +78,7 @@ int main(int argc, char const *argv[])
     return 0;
 } // main
 
+// Gets the sequences and (optional) scoring values from the user
 void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch)
 {
     string input;
@@ -101,6 +102,7 @@ void inputSequences(string &x, string &y, int &gap, int &match, int &mismatch)
     }
 }
 
+// Outputs the matrix, either the scoring matrix or the directional matrix
 void outputMatrix(Cell **matrix, int sx, int sy, string x, string y, string type)
 {
     // This might not work on larger sequences, but used for early debugging, and showing off smaller sequences
@@ -137,20 +139,24 @@ void outputMatrix(Cell **matrix, int sx, int sy, string x, string y, string type
     }
 }
 
+// Sets up the first row and column of the matrix with the gap penalty
 void initMatrix(Cell **matrix, int sx, int sy, int gap)
 {
     // First column of the matrix
     for (int i = 0; i < sx + 1; i++)
     {
         matrix[i][0].val = i * gap;
+        matrix[i][0].dir = 0;
     }
     // First row of the matrix
     for (int j = 0; j < sy + 1; j++)
     {
         matrix[0][j].val = j * gap;
+        matrix[0][j].dir = 0;
     }
 }
 
+// Fills the matrix with the Needleman-Wunsch algorithm
 void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
 {
     int diagonal, left, up;
@@ -193,17 +199,18 @@ void NW(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, i
             }
         }
     }
-    // Matrix is fully filled
+    // Matrix is filled
 }
 
+// Outputs the final alignment and score
 void alignScore(Cell **matrix, int sx, int sy, string x, string y, int gap, int match, int mismatch)
 {
-    string xfinal, yfinal;    // Final aligned sequences
-    int tmpx = sx, tmpy = sy; // to walk through matrix
+    string xfinal, yfinal;                     // Final aligned sequences
+    int tmpx = sx, tmpy = sy;                  // to walk through matrix
+    int gaps = 0, matches = 0, mismatches = 0; // Alignment statistics
 
     // Start with bottom right most arrow, work until we reach 0 - the edge.
     int direction = matrix[sx][sy].dir;
-
     while (direction != 0)
     {
         if (direction == 1) // Diagonal
@@ -213,15 +220,27 @@ void alignScore(Cell **matrix, int sx, int sy, string x, string y, int gap, int 
             yfinal.insert(yfinal.begin(), y[tmpy - 1]);
             tmpx--;
             tmpy--;
+
+            // Update counts
+            if (x[tmpx - 1] == y[tmpy - 1])
+            {
+                matches++;
+            }
+            else
+            {
+                mismatches++;
+            }
         }
         else if (direction == 2) // Left - gap in the x sequence
         {
+            gaps++;
             xfinal.insert(xfinal.begin(), '-');
             yfinal.insert(yfinal.begin(), y[tmpy - 1]);
             tmpy--;
         }
         else if (direction == 3) // Right - gap in the y sequence
         {
+            gaps++;
             yfinal.insert(yfinal.begin(), '-');
             xfinal.insert(xfinal.begin(), x[tmpx - 1]);
             tmpx--;
@@ -230,23 +249,29 @@ void alignScore(Cell **matrix, int sx, int sy, string x, string y, int gap, int 
         direction = matrix[tmpx][tmpy].dir;
     }
 
-    // If any of the sequences are not fully walked through, add the rest of the string
+    // If any of the sequences are not fully walked through, add the rest of the sequence as gaps
     while (tmpx > 0)
     {
+        gaps++;
         xfinal.insert(xfinal.begin(), x[tmpx - 1]);
         yfinal.insert(yfinal.begin(), '-');
         tmpx--;
     }
     while (tmpy > 0)
     {
+        gaps++;
         yfinal.insert(yfinal.begin(), y[tmpy - 1]);
         xfinal.insert(xfinal.begin(), '-');
         tmpy--;
     }
 
+    // Final output
     cout << endl;
-    cout << "ALIGNMENT:" << endl;
+    cout << "Final Alignment:" << endl;
     cout << xfinal << endl
          << yfinal << endl;
-    cout << "FINAL SCORE: " << matrix[sx][sy].val << endl;
+    cout << "-------------------------" << endl;
+    cout << "Score: " << matrix[sx][sy].val << endl;
+    cout << "Matches: " << matches << "     " << "Mismatches: " << mismatches << "      " << "Gaps: " << gaps << endl;
+    cout << "Similarity: " << ((float)matches / (float)(matches + mismatches + gaps)) * 100 << "%" << endl;
 }
